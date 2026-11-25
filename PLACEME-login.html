@@ -117,17 +117,13 @@
     <section class="auth" aria-labelledby="loginTitle">
       <div class="auth-top"><span class="eyebrow">PLACEME account</span><span class="secure"><i class="secure-dot"></i>Account access</span></div>
       <h2 id="loginTitle">Welcome back</h2>
-      <p class="intro" id="loginIntro">Enter your phone number and password. We’ll use a one-time code as an extra verification step.</p>
+      <p class="intro" id="loginIntro">Sign in with a one-time code sent to your phone.</p>
       <div class="auth-tabs" role="tablist" aria-label="Account access options"><button class="auth-tab active" id="signInTab" type="button" role="tab" aria-selected="true">Sign in</button><button class="auth-tab" id="signUpTab" type="button" role="tab" aria-selected="false">Create account</button></div>
       <form id="loginForm" novalidate>
         <div class="field">
           <div class="field-head"><label for="phone">Phone number</label></div>
           <div class="phone-row"><select class="country" id="countryCode" aria-label="Country calling code"><option value="+91" selected>🇮🇳 +91</option><option value="+1">🇺🇸 +1</option><option value="+44">🇬🇧 +44</option><option value="+971">🇦🇪 +971</option></select><input class="input" id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="Enter your number" aria-describedby="phoneHint"></div>
           <p class="hint" id="phoneHint">Use the number linked to your PLACEME account.</p>
-        </div>
-        <div class="field">
-          <div class="field-head"><label for="password">Password</label><button class="forgot" type="button" id="forgotPassword">Forgot password?</button></div>
-          <div class="password-wrap"><input class="input" id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password"><button class="show-pass" id="showPassword" type="button" aria-label="Show password">Show</button></div>
         </div>
         <button class="send-button" id="sendOtp" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z"/></svg>Send OTP to phone</button>
         <div class="otp-box" id="otpBox" aria-live="polite">
@@ -136,7 +132,7 @@
         </div>
         <div class="notice" id="notice" role="status" aria-live="polite"></div>
         <button class="verify-button" id="verifyButton" type="button">Verify &amp; sign in</button>
-        <div class="remember-row"><label class="check"><input type="checkbox" id="remember"><span>Remember this device</span></label><span class="remember-note">Only on this device</span></div>
+        
       </form>
       <form id="signupForm" hidden novalidate>
         <div class="field">
@@ -149,12 +145,6 @@
           <select class="input" id="signupCity"><option value="">Choose your city</option><option>Delhi</option><option>Noida</option><option>Greater Noida</option><option>Ghaziabad</option><option>Gurugram</option><option>Faridabad</option><option>Sonipat</option><option value="Other">Other</option></select>
           <input class="input" id="otherCity" type="text" placeholder="Enter your city" hidden style="margin-top:8px">
         </div>
-        <div class="field">
-          <div class="field-head"><label for="signupPassword">Create password</label></div>
-          <div class="password-wrap"><input class="input" id="signupPassword" type="password" autocomplete="new-password" placeholder="Create a password"><button class="show-pass" id="showSignupPassword" type="button" aria-label="Show password">Show</button></div>
-          <ul class="password-rules" id="passwordRules" aria-label="Password requirements"><li data-rule="length">At least 6 characters</li><li data-rule="upper">1 uppercase letter</li><li data-rule="digits">2 numbers</li><li data-rule="special">1 special character</li></ul>
-        </div>
-        <div class="field"><div class="field-head"><label for="confirmPassword">Confirm password</label></div><input class="input" id="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter your password"></div>
         <button class="send-button" id="sendSignupOtp" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5z"/></svg>Send verification code</button>
         <div class="otp-box" id="signupOtpBox"><label for="signupOtp">6-digit phone verification code</label><div class="otp-row"><input class="input" id="signupOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" aria-label="6-digit phone verification code"><button class="resend" id="resendSignupOtp" type="button">Resend code</button></div></div>
         <div class="notice" id="signupNotice" role="status" aria-live="polite"></div>
@@ -162,71 +152,12 @@
       </form>
       <div class="divider">or explore the prototype</div>
       <a class="demo-link" href="index.html"><span>↗</span> Explore PLACEME dashboard</a>
-      <p class="privacy"><b>Privacy note:</b> this is a front-end preview. Sign-in and account creation are not connected; the page does not send SMS, verify credentials, or store your details.</p>
+      <p class="privacy">Phone verification is handled by Supabase Auth. SMS requires an enabled provider.</p>
     </section>
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script>
-    const $=selector=>document.querySelector(selector);
-    const phone=$("#phone"), password=$("#password"), otpBox=$("#otpBox"), otp=$("#otp"), notice=$("#notice"), verifyButton=$("#verifyButton");
-    function showNotice(message,type="info"){notice.textContent=message;notice.className=`notice show ${type}`}
-    function showSignupNotice(message,type="info"){$("#signupNotice").textContent=message;$("#signupNotice").className=`notice show ${type}`}
-    function digits(value){return String(value||"").replace(/\D/g,"")}
-    function setMode(mode){
-      const signup=mode==="signup";
-      $("#loginForm").hidden=signup;$("#signupForm").hidden=!signup;
-      $("#signInTab").classList.toggle("active",!signup);$("#signUpTab").classList.toggle("active",signup);
-      $("#signInTab").setAttribute("aria-selected",String(!signup));$("#signUpTab").setAttribute("aria-selected",String(signup));
-      $("#loginTitle").textContent=signup?"Create your account":"Welcome back";
-      $("#loginIntro").textContent=signup?"Add your phone, email and city, then create a password that meets the rules below.":"Enter your phone number and password. We’ll use a one-time code as an extra verification step.";
-      $("#notice").className="notice";$("#signupNotice").className="notice";
-    }
-    function passwordChecks(value){return {length:value.length>=6,upper:/[A-Z]/.test(value),digits:(value.match(/\d/g)||[]).length>=2,special:/[^A-Za-z0-9]/.test(value)}}
-    function updatePasswordRules(){const checks=passwordChecks($("#signupPassword").value);document.querySelectorAll("#passwordRules li").forEach(li=>li.classList.toggle("ok",checks[li.dataset.rule]))}
-    function validSignupFields(){
-      const suPhone=$("#signupPhone"),suEmail=$("#signupEmail"),suCity=$("#signupCity"),otherCity=$("#otherCity"),suPassword=$("#signupPassword"),confirm=$("#confirmPassword");
-      const phoneOk=digits(suPhone.value).length>=8&&digits(suPhone.value).length<=15;
-      if(!phoneOk){suPhone.focus();showSignupNotice("Enter a valid phone number.","warn");return false}
-      if(!suEmail.value.trim()||!suEmail.checkValidity()){suEmail.focus();showSignupNotice("Enter a valid email address.","warn");return false}
-      if(!suCity.value||(suCity.value==="Other"&&!otherCity.value.trim())){(suCity.value==="Other"?otherCity:suCity).focus();showSignupNotice(suCity.value==="Other"?"Enter your city.":"Choose your city.","warn");return false}
-      const checks=passwordChecks(suPassword.value);updatePasswordRules();
-      if(!Object.values(checks).every(Boolean)){suPassword.focus();showSignupNotice("The password must have at least 6 characters, 1 uppercase letter, 2 numbers and 1 special character.","warn");return false}
-      if(confirm.value!==suPassword.value){confirm.focus();showSignupNotice("The password confirmation does not match.","warn");return false}
-      return true;
-    }
-    $("#sendOtp").addEventListener("click",()=>{
-      const number=digits(phone.value);
-      if(number.length<8||number.length>15){phone.focus();showNotice("Enter a valid phone number before requesting a code.","warn");return}
-      otpBox.classList.add("show");verifyButton.classList.add("show");
-      showNotice("SMS delivery isn’t connected yet, so no code was sent. Connect an SMS provider and server-side verification to enable real OTP sign-in.","warn");
-      otp.focus();
-    });
-    $("#resendOtp").addEventListener("click",()=>showNotice("No SMS was sent. Connect the SMS service before using resend.","warn"));
-    verifyButton.addEventListener("click",()=>{
-      if(!password.value){password.focus();showNotice("Enter your password to continue. This preview does not verify it.","warn");return}
-      if(digits(otp.value).length!==6){otp.focus();showNotice("Enter the 6-digit code from your phone. This preview cannot validate a code yet.","warn");return}
-      showNotice("Authentication isn’t connected. Your password and code were not sent or checked; sign-in is not active yet.","warn");
-    });
-    $("#showPassword").addEventListener("click",e=>{const reveal=password.type==="password";password.type=reveal?"text":"password";e.currentTarget.textContent=reveal?"Hide":"Show";e.currentTarget.setAttribute("aria-label",reveal?"Hide password":"Show password")});
-    $("#forgotPassword").addEventListener("click",()=>showNotice("Password reset needs a connected account service. No reset message was sent.","info"));
-    $("#loginForm").addEventListener("submit",e=>e.preventDefault());
-    $("#signInTab").addEventListener("click",()=>setMode("login"));
-    $("#signUpTab").addEventListener("click",()=>setMode("signup"));
-    $("#signupPassword").addEventListener("input",updatePasswordRules);
-    $("#showSignupPassword").addEventListener("click",e=>{const el=$("#signupPassword"),reveal=el.type==="password";el.type=reveal?"text":"password";e.currentTarget.textContent=reveal?"Hide":"Show";e.currentTarget.setAttribute("aria-label",reveal?"Hide password":"Show password")});
-    $("#signupCity").addEventListener("change",e=>{$("#otherCity").hidden=e.target.value!=="Other"});
-    $("#sendSignupOtp").addEventListener("click",()=>{
-      if(!validSignupFields())return;
-      $("#signupOtpBox").classList.add("show");
-      showSignupNotice("SMS delivery isn’t connected yet, so no code was sent. Connect an SMS provider to enable phone verification.","warn");
-      $("#signupOtp").focus();
-    });
-    $("#resendSignupOtp").addEventListener("click",()=>showSignupNotice("No SMS was sent. Connect the SMS service before using resend.","warn"));
-    $("#createAccount").addEventListener("click",()=>{
-      if(!validSignupFields())return;
-      if(digits($("#signupOtp").value).length!==6){$("#signupOtp").focus();showSignupNotice("Enter the 6-digit phone code. This preview cannot validate it yet.","warn");return}
-      showSignupNotice("Account creation isn’t connected. Your details were not sent or saved, and no account was created.","warn");
-    });
-  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="auth-config.js"></script>
+<script src="placeme-auth.js"></script>
 </body>
 </html>
