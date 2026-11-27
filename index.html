@@ -93,6 +93,7 @@
     table{border-collapse:collapse;width:100%;min-width:730px;font-size:11px}
     th{text-align:left;color:#71817b;background:#f7faf7;font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-weight:750;padding:11px 13px;border-bottom:1px solid var(--line);white-space:nowrap}
     td{padding:11px 13px;border-bottom:1px solid #edf1ed;vertical-align:top;color:#52635e}
+    .full-placement-table{min-width:2200px}.full-placement-table th:first-child,.full-placement-table td:first-child{position:sticky;left:0;background:#fff;min-width:220px;max-width:260px;box-shadow:1px 0 0 var(--line);z-index:1}.full-placement-table th:first-child{background:#f7faf7}.full-placement-table td:nth-child(12){min-width:270px;max-width:350px}.full-placement-table td:nth-child(13){min-width:180px}.full-placement-table td:nth-child(n+4):nth-child(-n+11){min-width:115px}.full-placement-table td:nth-child(15){min-width:135px}
     tbody tr:last-child td{border-bottom:0}
     tbody tr:hover{background:#fafcf9}
     .table-name{font-weight:700;color:var(--ink)}
@@ -263,7 +264,7 @@
       </section>
 
       <section class="section" id="explorer">
-        <div class="section-heading"><div><h2>College explorer</h2><p>Search and filter the full 151-institution directory. Select a row to see every recorded field and its source.</p></div><button class="button" type="button" id="downloadCsv">Download filtered CSV</button></div>
+        <div class="section-heading"><div><h2>College explorer</h2><p>All placement fields are shown below. Scroll horizontally to see packages, recruiters and sources. Select a row for details. Missing or unverified figures are identified explicitly.</p></div><button class="button" type="button" id="downloadCsv">Download filtered CSV</button></div>
         <div class="panel">
           <div class="filters">
             <label class="control search"><input id="searchInput" type="search" placeholder="Search college, programme, or note…" aria-label="Search institutions"></label>
@@ -271,7 +272,7 @@
             <label class="control"><select id="statusFilter" aria-label="Filter by data status"><option value="">All source statuses</option><option value="captured">Source figures captured</option><option value="missing">Figures not verified</option></select></label>
             <button class="button" type="button" id="clearFilters">Reset</button>
           </div>
-          <div class="table-wrap"><table><thead><tr><th>Institution</th><th>City</th><th>Institution type</th><th>Cohort</th><th>Placement note</th><th>Source status</th><th></th></tr></thead><tbody id="collegeRows"></tbody></table></div>
+          <div class="table-wrap" tabindex="0" aria-label="College placement data; scroll horizontally to view all columns"><table class="full-placement-table"><thead><tr><th>Institution</th><th>City</th><th>Institution type</th><th>Placement year</th><th>Course</th><th>Graduates / eligible</th><th>Placed / offers</th><th>Placement rate</th><th>Average (LPA)</th><th>Median (LPA)</th><th>Highest (LPA)</th><th>Recruiters / notes</th><th>Source type</th><th>Source URL</th><th>Data status</th><th></th></tr></thead><tbody id="collegeRows"></tbody></table></div>
           <div class="table-meta"><span id="resultCount">—</span><div class="pager"><button id="prevPage" type="button" aria-label="Previous page">‹</button><span id="pageLabel">1 / 1</span><button id="nextPage" type="button" aria-label="Next page">›</button></div></div>
         </div>
       </section>
@@ -390,8 +391,9 @@
       }).sort((a,b)=>(a.name||"").localeCompare(b.name||""));
       const total=state.filtered.length, pages=Math.max(1,Math.ceil(total/PAGE_SIZE)); state.page=Math.min(state.page,pages);
       const start=(state.page-1)*PAGE_SIZE, rows=state.filtered.slice(start,start+PAGE_SIZE);
-      $("#collegeRows").innerHTML=rows.map((c,i)=>`<tr class="click-row" data-index="${start+i}" tabindex="0" aria-label="Open details for ${esc(c.name)}"><td class="table-name">${esc(c.name)}</td><td>${esc(c.city)}</td><td>${esc(c.category)}</td><td>${esc(c.cohort)}</td><td>${meaningful(c.rate)?esc(c.rate):"—"}</td><td><span class="status-pill ${captured(c)?"":"missing"}">${captured(c)?"Figures captured":"Not verified"}</span></td><td class="row-chevron">›</td></tr>`).join("")||`<tr><td colspan="7" class="empty">No institutions match these filters.</td></tr>`;
-      $$(".click-row").forEach(tr=>{tr.addEventListener("click",()=>openDetails(state.filtered[Number(tr.dataset.index)]));tr.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openDetails(state.filtered[Number(tr.dataset.index)])}})});
+      const cell=v=>`<td>${esc(v||"Not recorded")}</td>`;
+      $("#collegeRows").innerHTML=rows.map((c,i)=>`<tr class="click-row" data-index="${start+i}" tabindex="0" aria-label="Open details for ${esc(c.name)}"><td class="table-name">${esc(c.name)}</td>${[c.city,c.category,c.cohort,c.scope,c.eligible,c.placedOffers,c.rate,c.averagePackage,c.medianPackage,c.highestPackage,c.notes,c.sourceType].map(cell).join("")}<td>${normalizeUrl(c.sourceUrl)?`<a class="source-link" href="${esc(c.sourceUrl)}" target="_blank" rel="noopener noreferrer">Open source ↗</a>`:"Not recorded"}</td><td><span class="status-pill ${captured(c)?"":"missing"}">${esc(c.status||"Not recorded")}</span></td><td class="row-chevron">›</td></tr>`).join("")||`<tr><td colspan="16" class="empty">No institutions match these filters.</td></tr>`;
+      $$(".click-row").forEach(tr=>{tr.addEventListener("click",e=>{if(!e.target.closest("a"))openDetails(state.filtered[Number(tr.dataset.index)])});tr.addEventListener("keydown",e=>{if(e.target===tr&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openDetails(state.filtered[Number(tr.dataset.index)])}})});
       $("#resultCount").textContent=`Showing ${total?start+1:0}–${Math.min(start+PAGE_SIZE,total)} of ${total} institutions`;
       $("#pageLabel").textContent=`${state.page} / ${pages}`; $("#prevPage").disabled=state.page<=1; $("#nextPage").disabled=state.page>=pages;
     }
