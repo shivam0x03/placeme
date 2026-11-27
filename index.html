@@ -397,13 +397,39 @@
       $("#resultCount").textContent=`Showing ${total?start+1:0}–${Math.min(start+PAGE_SIZE,total)} of ${total} institutions`;
       $("#pageLabel").textContent=`${state.page} / ${pages}`; $("#prevPage").disabled=state.page<=1; $("#nextPage").disabled=state.page>=pages;
     }
+    const demoExamples=new Map();
+    let demoState="loading",activeCollege=null;
+    const snapshotIds=new Map(COLLEGES.map((c,i)=>[c.name,i+1]));
+    function renderCollegeDetails(c){
+      const demo=demoExamples.get(c.id??snapshotIds.get(c.name))||{};
+      const exampleRows=FIELD_LABELS.filter(([key])=>Object.hasOwn(demo,key));
+      const banner=exampleRows.length
+        ? '<div style="background:#fff7e8;border:1px solid #e9d6ad;border-radius:12px;padding:14px;margin:0 0 12px;color:#654512;font-size:11px"><strong style="display:block;margin-bottom:5px">Academic project demo values</strong>Synthetic examples from the demo workbook appear below the original fields. They are not university disclosures and may not correspond to the reported cohort or placement rate. Do not use them for college decisions.</div>'
+        : demoState==="loading" ? '<p class="footnote">Loading optional demo examples…</p>' : demoState==="error" ? '<p class="footnote">Demo examples unavailable. Original data is shown.</p>' : '';
+      $("#drawerDetails").innerHTML=banner+FIELD_LABELS.filter(([key])=>key!=="sourceUrl").map(([key,label])=>{
+        const value=c[key]||"Not recorded";
+        const sample=Object.hasOwn(demo,key)&&typeof demo[key]==="string"&&demo[key].startsWith("DEMO: ") ? '<span style="display:block;margin-top:6px;color:#80500c;font-weight:700;background:#fff4dc;padding:6px 8px;border-radius:6px">'+esc(demo[key])+'</span>' : '';
+        return '<div class="detail-group"><b>'+esc(label)+'</b><span>'+esc(value)+sample+'</span></div>';
+      }).join("");
+    }
+    async function loadDemoExamples(){
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+      try{
+        const response=await fetch("https://pxzjfipdxxlazvubxfoa.supabase.co/rest/v1/college_placement_demo?select=college_id,demo_fields&order=college_id.asc",{headers:{apikey:"sb_publishable_FqIv3eDHVm30FiDXP5PgYQ_-JPG2UVB",Accept:"application/json"},signal:controller.signal,cache:"no-store"});
+        if(!response.ok)throw new Error("Demo request failed: "+response.status);
+        const rows=await response.json();if(!Array.isArray(rows)||!rows.length)throw new Error("No demo records");
+        rows.forEach(r=>{if(Number.isInteger(r.college_id)&&r.demo_fields&&typeof r.demo_fields==="object")demoExamples.set(r.college_id,r.demo_fields)});
+        demoState="ready";
+      }catch(error){demoState="error";console.warn("PLACEME demo unavailable",error)}
+      finally{clearTimeout(timer);if(activeCollege)renderCollegeDetails(activeCollege)}
+    }
     function openDetails(c){
       if(!c)return; $("#drawerTitle").textContent=c.name; $("#drawerSubtitle").textContent=[c.city,c.category].filter(Boolean).join(" · ");
-      $("#drawerDetails").innerHTML=FIELD_LABELS.filter(([key])=>key!=="sourceUrl").map(([key,label])=>`<div class="detail-group"><b>${esc(label)}</b><span>${meaningful(c[key])?esc(c[key]):(c[key]?esc(c[key]):"Not recorded")}</span></div>`).join("");
+      activeCollege=c; renderCollegeDetails(c);
       const source=$("#drawerSource"), url=normalizeUrl(c.sourceUrl); source.href=url||"#"; source.style.display=url?"inline-flex":"none";
       $("#drawerBackdrop").classList.add("open"); $("#drawerBackdrop").setAttribute("aria-hidden","false"); $("#closeDrawer").focus();
     }
-    function closeDetails(){ $("#drawerBackdrop").classList.remove("open"); $("#drawerBackdrop").setAttribute("aria-hidden","true"); }
+    function closeDetails(){ activeCollege=null; $("#drawerBackdrop").classList.remove("open"); $("#drawerBackdrop").setAttribute("aria-hidden","true"); }
     function csvCell(v){return `"${String(v??"").replace(/"/g,'""')}"`}
     function downloadCsv(){
       const headers=FIELD_LABELS.map(x=>x[1]), keys=FIELD_LABELS.map(x=>x[0]);
@@ -472,7 +498,7 @@
         };
         const [rows,sources]=await Promise.all([read("college_placements"),read("placement_sources")]);
         if(rows.some(r=>!r.name||!r.city)||sources.some(r=>!r.name))throw new Error("Invalid dataset");
-        COLLEGES=rows.map(r=>({name:r.name,city:r.city,category:r.category??"",cohort:r.cohort??"",scope:r.scope??"",eligible:r.eligible??"",placedOffers:r.placed_offers??"",rate:r.rate??"",averagePackage:r.average_package??"",medianPackage:r.median_package??"",highestPackage:r.highest_package??"",notes:r.notes??"",sourceType:r.source_type??"",sourceUrl:r.source_url??"",status:r.status??""}));
+        COLLEGES=rows.map(r=>({id:r.id,name:r.name,city:r.city,category:r.category??"",cohort:r.cohort??"",scope:r.scope??"",eligible:r.eligible??"",placedOffers:r.placed_offers??"",rate:r.rate??"",averagePackage:r.average_package??"",medianPackage:r.median_package??"",highestPackage:r.highest_package??"",notes:r.notes??"",sourceType:r.source_type??"",sourceUrl:r.source_url??"",status:r.status??""}));
         SOURCE_INDEX=sources.map(r=>({name:r.name,support:r.support??"",url:r.url??""}));
         initSummary();
         status.textContent="Database connected · "+COLLEGES.length+" institutions";
@@ -481,7 +507,7 @@
         console.warn("PLACEME database unavailable",error);
       } finally {clearTimeout(timer)}
     }
-    loadPlacementDatabase();
+    loadPlacementDatabase(); loadDemoExamples();
   </script>
 </body>
 </html>
